@@ -196,10 +196,10 @@ module.exports = class Sessions {
         var session = Sessions.getSession(sessionName);
         if (session) {
             if (session.state == "CONNECTED") {
-                var resultSendText = await session.client.then(async client => {
-                    return await client.sendMessageToId(number + '@c.us', text);
+                await session.client.then(async client => {
+                    return await client.sendText(number + '@c.us', text);
                 });
-                return { result: "success" }
+                return { result: "success" };
             } else {
                 return { result: "error", message: session.state };
             }
