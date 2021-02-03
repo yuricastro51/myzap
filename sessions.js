@@ -7,6 +7,8 @@ const path = require('path');
 const venom = require('venom-bot');
 const { json } = require('express');
 const { Session } = require('inspector');
+const axios = require('axios');
+require('dotenv').config();
 
 module.exports = class Sessions {
 
@@ -32,6 +34,30 @@ module.exports = class Sessions {
         } else {
             console.log("session.state: " + session.state);
         }
+        await session.client.then(client => {
+            client.onMessage((message) => {
+                if (process.env.WEBHOOK.length > 0) {
+                    axios.post(process.env.WEBHOOK, this.sanitizeMessage(sessionName, message))
+                        .then((response) => {
+                            //console.log('response', response);
+                        })
+                        .catch((error) => {
+                            //console.log('error', error);
+                        });
+                }
+            });
+            client.onAck(ack => {
+                if (ack.ack == 2 && process.env.WEBHOOK.length > 0) {
+                    axios.post(process.env.WEBHOOK, this.sanitizeMessage(sessionName, ack))
+                        .then((response) => {
+                            //console.log('response', response);
+                        })
+                        .catch((error) => {
+                            //console.log('error', error);
+                        });
+                }
+            });
+        });
         return session;
     }//start
 
@@ -227,4 +253,28 @@ module.exports = class Sessions {
             return { result: "error", message: "NOTFOUND" };
         }
     }//message
+
+    static sanitizeMessage(sessionName, data) {
+        return {
+            messages: [{
+                id: (data.id ? data.id : null),
+                body: (data.body ? data.body : null),
+                filelink: (data.id ? data.id : null),
+                fromMe: false,
+                self: 0,
+                isForwarded: (data.isForwarded ? data.isForwarded : null),
+                author: (data.from ? data.from : null),
+                time: (data.t ? data.t : null),
+                lat: (data.lat ? data.lat : null),
+                lng: (data.lng ? data.lng : null),
+                chatId: (data.chatId ? data.chatId : null),
+                type: (data.type ? data.type : null),
+                senderName: data.from,
+                caption: (data.caption ? data.caption : null),
+                quotedMsgBody: (data.quotedMsgObj ? data.quotedMsgObj : null),
+                chatName: data.from,
+            }],
+            sessionName: sessionName
+        };
+    }
 }
